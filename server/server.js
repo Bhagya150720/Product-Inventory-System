@@ -6,7 +6,7 @@ import productRoutes from './routes/productRoutes.js';
 import categoryRoutes from './routes/categoryRoutes.js';
 import errorHandler from './middleware/errorHandler.js';
 
-// Load environment variables
+// Load env variables
 dotenv.config();
 
 // Connect to MongoDB
@@ -18,20 +18,15 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// CORS configuration (allow requests from Vite frontend dev server)
+// Enable CORS so the React app (on port 5173) can talk to this backend
 app.use(cors({
   origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
   credentials: true
 }));
 
-// API Routes
+// Setup base endpoints
 app.use('/api/products', productRoutes);
 app.use('/api/categories', categoryRoutes);
-
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.status(200).json({ success: true, message: 'Server is healthy and running.' });
-});
 
 // Fallback Route Handler
 app.use((req, res, next) => {
@@ -40,11 +35,10 @@ app.use((req, res, next) => {
   next(error);
 });
 
-// Global Error Handler
+// Use error handler middleware
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
-
 app.listen(PORT, () => {
-  console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
