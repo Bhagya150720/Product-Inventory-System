@@ -74,7 +74,6 @@ export default function App() {
     setCurrentPage(1);
   }, [search, selectedCategories]);
 
-  // 7. Operations Callbacks (At App component level)
   const handleProductAdded = () => {
     fetchProducts();
     triggerToast('Product added successfully!');
