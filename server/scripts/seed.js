@@ -1,186 +1,88 @@
-import React from 'react';
-import { Trash2, Calendar, Box, Inbox } from 'lucide-react';
+import mongoose from 'mongoose';
+import dotenv from 'dotenv';
+import Category from '../models/Category.js';
+import Product from '../models/Product.js';
+import connectDB from '../config/db.js';
 
-export default function ProductTable({
-  products,
-  pagination,
-  setPage,
-  onProductDeleted,
-}) {
-  const { currentPage, totalPages, totalProducts } = pagination;
+dotenv.config();
 
-  // Handle Soft Delete confirmation
-  const handleDelete = async (productId, name) => {
-    // Standard browser confirmation dialog
-    if (window.confirm(`Are you sure you want to delete "${name}"?`)) {
-      try {
-        const response = await fetch(`http://localhost:5000/api/products/${productId}`, {
-          method: 'DELETE',
-        });
-        if (response.ok) {
-          // Notify the parent component to refresh the data list
-          onProductDeleted();
-        } else {
-          const data = await response.json();
-          alert(data.message || 'Failed to delete product.');
-        }
-      } catch (err) {
-        alert('Network error. Failed to delete product.');
-      }
+const categoriesData = [
+  { name: 'Electronics' },
+  { name: 'Clothing' },
+  { name: 'Home & Kitchen' },
+  { name: 'Books' },
+  { name: 'Sports' },
+  { name: 'Beauty' },
+  { name: 'Automotive' }
+];
+
+const seedData = async () => {
+  try {
+    // Fallback if ENV is not loaded
+    if (!process.env.MONGO_URI) {
+      process.env.MONGO_URI = 'mongodb://localhost:27017/product_inventory';
     }
-  };
 
-  // Generate page numbers array, e.g. [1, 2, 3...]
-  const pageNumbers = [];
-  for (let i = 1; i <= totalPages; i++) {
-    pageNumbers.push(i);
+    await connectDB();
+
+    // Clear old collections
+    await Category.deleteMany();
+    await Product.deleteMany();
+
+    console.log('Database cleared successfully.');
+
+    // Seed Categories
+    const createdCategories = await Category.insertMany(categoriesData);
+    console.log(`${createdCategories.length} categories seeded.`);
+
+    const getCatId = (name) => {
+      const found = createdCategories.find(c => c.name === name);
+      return found ? found._id : null;
+    };
+
+    // Seed Sample Products
+    const productsData = [
+      {
+        name: 'Smartphone X1',
+        description: 'Latest model with 128GB storage and 5G connectivity.',
+        quantity: 15,
+        categories: [getCatId('Electronics')],
+      },
+      {
+        name: 'Wireless Noise-Canceling Headphones',
+        description: 'Over-ear headphones with superior active noise cancellation.',
+        quantity: 8,
+        categories: [getCatId('Electronics')],
+      },
+      {
+        name: 'Denim Jacket',
+        description: 'Classic blue denim jacket, regular fit, unisex.',
+        quantity: 25,
+        categories: [getCatId('Clothing')],
+      },
+      {
+        name: 'Air Fryer XL',
+        description: '5.8-quart digital air fryer with 8 cooking presets.',
+        quantity: 12,
+        categories: [getCatId('Home & Kitchen')],
+      },
+      {
+        name: 'Yoga Mat',
+        description: 'Eco-friendly high-density yoga mat with carrying strap.',
+        quantity: 50,
+        categories: [getCatId('Sports'), getCatId('Beauty')],
+      }
+    ];
+
+    await Product.insertMany(productsData);
+    console.log('Sample products seeded successfully.');
+
+    console.log('Database Seeding Complete!');
+    process.exit(0);
+  } catch (error) {
+    console.error(`Error seeding database: ${error.message}`);
+    process.exit(1);
   }
+};
 
-  // Helper to format Mongoose Date string to readable text
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
-
-  return (
-    <div className="flex flex-col bg-slate-900/40 border border-slate-800 rounded-xl overflow-hidden backdrop-blur-md">
-      
-      {/* 1. Responsive Table Container */}
-      <div className="overflow-x-auto">
-        {products.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-slate-500 gap-2">
-            <Inbox size={44} className="text-slate-700" />
-            <p className="font-semibold text-slate-400">No products in inventory</p>
-            <p className="text-xs text-slate-500">Refine search criteria or add a product</p>
-          </div>
-        ) : (
-          <table className="w-full text-left text-sm border-collapse">
-            <thead>
-              <tr className="bg-slate-950/70 border-b border-slate-800 text-slate-400 uppercase tracking-wider text-xs font-semibold">
-                <th className="px-6 py-4">Product Name</th>
-                <th className="px-6 py-4">Categories</th>
-                <th className="px-6 py-4">Stock</th>
-                <th className="px-6 py-4">Added On</th>
-                <th className="px-6 py-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-850">
-              {products.map((product) => (
-                <tr key={product._id} className="hover:bg-slate-900/20 transition-colors">
-                  
-                  {/* Name and Description */}
-                  <td className="px-6 py-4 max-w-xs">
-                    <p className="font-semibold text-slate-100 truncate">{product.name}</p>
-                    {product.description && (
-                      <p className="text-xs text-slate-400 mt-1 line-clamp-1 truncate">{product.description}</p>
-                    )}
-                  </td>
-
-                  {/* Categories Tag Pills */}
-                  <td className="px-6 py-4">
-                    <div className="flex flex-wrap gap-1.5">
-                      {product.categories.map((category) => (
-                        <span
-                          key={category._id}
-                          className="bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2.5 py-0.5 rounded-full text-xs font-medium"
-                        >
-                          {category.name}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-
-                  {/* Stock Quantity status indicator */}
-                  <td className="px-6 py-4 text-slate-200">
-                    <div className="flex items-center gap-1.5">
-                      <Box size={14} className="text-slate-500" />
-                      <span
-                        className={`font-medium ${
-                          product.quantity === 0
-                            ? 'text-red-400'        
-                            : product.quantity < 5
-                            ? 'text-yellow-450'     
-                            : 'text-slate-200'      
-                        }`}
-                      >
-                        {product.quantity}
-                      </span>
-                    </div>
-                  </td>
-
-                  {/* Date Created */}
-                  <td className="px-6 py-4 text-slate-400">
-                    <div className="flex items-center gap-1.5">
-                      <Calendar size={14} className="text-slate-500" />
-                      <span>{formatDate(product.createdAt)}</span>
-                    </div>
-                  </td>
-
-                  {/* Actions (Delete Icon) */}
-                  <td className="px-6 py-4 text-right">
-                    <button
-                      onClick={() => handleDelete(product._id, product.name)}
-                      className="p-2 bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white rounded-lg transition-colors"
-                      title="Delete Product"
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  </td>
-
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-    
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between border-t border-slate-800 px-6 py-4 bg-slate-950/20">
-          <p className="text-xs text-slate-400">
-            Showing <span className="font-semibold text-indigo-400">{products.length}</span> of{' '}
-            <span className="font-semibold text-slate-250">{totalProducts}</span> products
-          </p>
-
-          <div className="flex items-center gap-1">
-            {/* Prev Button */}
-            <button
-              onClick={() => setPage(Math.max(1, currentPage - 1))}
-              disabled={currentPage === 1}
-              className="px-3 py-1.5 bg-slate-900 border border-slate-850 text-slate-400 hover:text-slate-200 rounded-lg text-xs font-semibold disabled:opacity-30 transition-opacity"
-            >
-              Prev
-            </button>
-
-            {/* Dynamic Numbered Pages (1, 2, 3, ...) */}
-            {pageNumbers.map((number) => (
-              <button
-                key={number}
-                onClick={() => setPage(number)}
-                className={`w-8 h-8 rounded-lg text-xs font-semibold border ${
-                  currentPage === number
-                    ? 'bg-indigo-650 border-indigo-500 text-white shadow-lg'
-                    : 'bg-slate-900 border-slate-855 text-slate-400 hover:text-slate-205'
-                }`}
-              >
-                {number}
-              </button>
-            ))}
-
-            {/* Next Button */}
-            <button
-              onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
-              disabled={currentPage === totalPages}
-              className="px-3 py-1.5 bg-slate-900 border border-slate-850 text-slate-400 hover:text-slate-200 rounded-lg text-xs font-semibold disabled:opacity-30 transition-opacity"
-            >
-              Next
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+seedData();
