@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, AlertCircle } from 'lucide-react';
+import { API_URL } from '../config.js';
 
 export default function ProductForm({ categories, onProductAdded }) {
   const [name, setName] = useState('');
@@ -49,7 +50,7 @@ export default function ProductForm({ categories, onProductAdded }) {
     setErrors({});
 
     try {
-      const response = await fetch('http://localhost:5000/api/products', {
+      const response = await fetch(`${API_URL}/api/products`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

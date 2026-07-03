@@ -1,5 +1,6 @@
 import React from 'react';
 import { Trash2, Calendar, Box, Inbox } from 'lucide-react';
+import { API_URL } from '../config.js';
 
 export default function ProductTable({
   products,
@@ -12,17 +13,17 @@ export default function ProductTable({
   const handleDelete = async (productId, name) => {
     if (window.confirm(`Are you sure you want to delete "${name}"?`)) {
       try {
-        const response = await fetch(`http://localhost:5000/api/products/${productId}`, {
+        const response = await fetch(`${API_URL}/api/products/${productId}`, {
           method: 'DELETE',
         });
         if (response.ok) {
           onProductDeleted();
         } else {
           const data = await response.json();
-          alert(data.message || 'Failed to delete product.');
+          onProductDeleted(data.message || 'Failed to delete product.');
         }
       } catch (err) {
-        alert('Network error. Failed to delete product.');
+        onProductDeleted('Network error. Failed to delete product.');
       }
     }
   };
